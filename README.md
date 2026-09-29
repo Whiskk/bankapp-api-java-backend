@@ -428,7 +428,7 @@ The repository interfaces provide the boundary where database-backed implementat
 
 ## Postman Quick Start
 
-The repository includes a ready-to-import collection at [postman/simple-bank-app.postman_collection.json](postman/simple-bank-app.postman_collection.json).
+The repository includes a ready-to-import collection at [postman/william-rowley-simple-bank-app.postman_collection.json](postman/william-rowley-simple-bank-app.postman_collection.json).
 
 In Postman, select **Import**, choose that JSON file, and open the **Simple Bank App API** collection. Its requests use the `baseUrl`, `token`, `customerId`, `savingsAccountId`, and `checkingAccountId` collection variables.
 

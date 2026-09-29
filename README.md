@@ -372,6 +372,10 @@ The repository interfaces provide the boundary where database-backed implementat
 
 ## Postman Quick Start
 
+The repository includes a ready-to-import collection at [postman/simple-bank-app.postman_collection.json](postman/simple-bank-app.postman_collection.json).
+
+In Postman, select **Import**, choose that JSON file, and open the **Simple Bank App API** collection. Its requests use the `baseUrl`, `customerId`, `savingsAccountId`, and `checkingAccountId` collection variables.
+
 1. Start the API with `./mvnw spring-boot:run` or `.\mvnw.cmd spring-boot:run`.
 2. Create a customer and note its ID.
 3. Create two accounts using that customer ID.

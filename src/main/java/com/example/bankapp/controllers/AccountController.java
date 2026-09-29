@@ -17,6 +17,7 @@ import com.example.bankapp.models.Account;
 import com.example.bankapp.models.AccountRequest;
 import com.example.bankapp.models.AccountTransaction;
 import com.example.bankapp.models.MoneyRequest;
+import com.example.bankapp.models.TransferRequest;
 import com.example.bankapp.services.AccountService;
 
 @RestController
@@ -52,6 +53,11 @@ public class AccountController {
     @PostMapping("/{id}/withdraw")
     public Account withdrawMoney(@PathVariable Long id, @Valid @RequestBody MoneyRequest request) {
         return accountService.withdraw(id, request);
+    }
+
+    @PostMapping("/transfer")
+    public Account transferMoney(@Valid @RequestBody TransferRequest request) {
+        return accountService.transfer(request);
     }
 
     @GetMapping("/{id}/transactions")

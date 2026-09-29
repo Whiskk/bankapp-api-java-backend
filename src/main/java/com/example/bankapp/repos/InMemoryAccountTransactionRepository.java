@@ -29,6 +29,7 @@ public class InMemoryAccountTransactionRepository implements AccountTransactionR
                 transaction.type(),
                 transaction.amount(),
                 transaction.balanceAfter(),
+                transaction.relatedAccountId(),
                 transaction.createdAt());
         transactions.add(savedTransaction);
         return savedTransaction;

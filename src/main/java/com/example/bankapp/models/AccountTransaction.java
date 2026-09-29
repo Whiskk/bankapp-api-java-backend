@@ -9,6 +9,7 @@ public record AccountTransaction(
         TransactionType type,
         BigDecimal amount,
         BigDecimal balanceAfter,
+        Long relatedAccountId,
         Instant createdAt
 ) {
 }

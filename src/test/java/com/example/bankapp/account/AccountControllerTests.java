@@ -35,13 +35,7 @@ class AccountControllerTests {
     @Test
     void customerCanHaveMultipleAccountsAndManageMoney() throws Exception {
         String savingsId = createAccount("SAVINGS");
-
-        mockMvc.perform(post("/api/accounts")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"userId\":1,\"accountType\":\"CHECKING\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.userId").value(1))
-                .andExpect(jsonPath("$.accountType").value("CHECKING"));
+        String checkingId = createAccount("CHECKING");
 
         mockMvc.perform(post("/api/accounts/{id}/deposit", savingsId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -66,6 +60,28 @@ class AccountControllerTests {
                 .andExpect(jsonPath("$[0].amount").value(500))
                 .andExpect(jsonPath("$[1].type").value("WITHDRAWAL"))
                 .andExpect(jsonPath("$[1].amount").value(200));
+
+        mockMvc.perform(post("/api/accounts/transfer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fromAccountId\":" + savingsId
+                                + ",\"toAccountId\":" + checkingId + ",\"amount\":100}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(Integer.parseInt(savingsId)))
+                .andExpect(jsonPath("$.balance").value(200));
+
+        mockMvc.perform(get("/api/accounts/{id}", checkingId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.balance").value(100));
+
+        mockMvc.perform(get("/api/accounts/{id}/transactions", savingsId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[2].type").value("TRANSFER"))
+                .andExpect(jsonPath("$[2].relatedAccountId").value(Integer.parseInt(checkingId)));
+
+        mockMvc.perform(get("/api/accounts/{id}/transactions", checkingId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("TRANSFER"))
+                .andExpect(jsonPath("$[0].relatedAccountId").value(Integer.parseInt(savingsId)));
     }
 
     private String createAccount(String accountType) throws Exception {

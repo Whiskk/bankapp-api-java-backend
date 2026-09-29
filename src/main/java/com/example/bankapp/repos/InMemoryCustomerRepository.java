@@ -1,6 +1,7 @@
 package com.example.bankapp.repos;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -26,9 +27,16 @@ public class InMemoryCustomerRepository implements CustomerRepository {
     }
 
     @Override
+    public Optional<Customer> findByUsername(String username) {
+        return customers.values().stream()
+                .filter(customer -> username.equalsIgnoreCase(customer.username()))
+                .findFirst();
+    }
+
+    @Override
     public Customer save(Customer customer) {
         Long id = customer.id() == null ? nextId.getAndIncrement() : customer.id();
-        Customer savedCustomer = new Customer(id, customer.name());
+        Customer savedCustomer = new Customer(id, customer.name(), customer.username(), customer.passwordHash());
         customers.put(id, savedCustomer);
         return savedCustomer;
     }

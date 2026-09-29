@@ -28,12 +28,14 @@ public class CustomerService {
     }
 
     public Customer createCustomer(CustomerRequest request) {
-        return customerRepository.save(new Customer(null, request.name()));
+        return customerRepository.save(new Customer(null, request.name(), null, null));
     }
 
     public Customer updateCustomer(Long id, CustomerRequest request) {
         findCustomer(id);
-        return customerRepository.save(new Customer(id, request.name()));
+        Customer customer = findCustomer(id);
+        return customerRepository.save(new Customer(
+            id, request.name(), customer.username(), customer.passwordHash()));
     }
 
     public void deleteCustomer(Long id) {

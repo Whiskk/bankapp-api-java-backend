@@ -17,6 +17,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.example.bankapp.models.Customer;
 import com.example.bankapp.models.CustomerRequest;
+import com.example.bankapp.models.CustomerResponse;
 import com.example.bankapp.services.CustomerService;
 
 @RestController
@@ -30,28 +31,30 @@ public class CustomerController {
     }
 
     @GetMapping
-    public List<Customer> getAllCustomers() {
-        return customerService.getAllCustomers();
+    public List<CustomerResponse> getAllCustomers() {
+        return customerService.getAllCustomers().stream()
+                .map(CustomerResponse::from)
+                .toList();
     }
 
     @GetMapping("/{id}")
-    public Customer getCustomerById(@PathVariable Long id) {
-        return customerService.getCustomerById(id);
+    public CustomerResponse getCustomerById(@PathVariable Long id) {
+        return CustomerResponse.from(customerService.getCustomerById(id));
     }
 
     @PostMapping
-    public ResponseEntity<Customer> postCustomer(@Valid @RequestBody CustomerRequest request) {
+    public ResponseEntity<CustomerResponse> postCustomer(@Valid @RequestBody CustomerRequest request) {
         Customer customer = customerService.createCustomer(request);
         var location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(customer.id())
                 .toUri();
-        return ResponseEntity.created(location).body(customer);
+        return ResponseEntity.created(location).body(CustomerResponse.from(customer));
     }
 
     @PutMapping("/{id}")
-    public Customer putCustomer(@PathVariable Long id, @Valid @RequestBody CustomerRequest request) {
-        return customerService.updateCustomer(id, request);
+    public CustomerResponse putCustomer(@PathVariable Long id, @Valid @RequestBody CustomerRequest request) {
+        return CustomerResponse.from(customerService.updateCustomer(id, request));
     }
 
     @DeleteMapping("/{id}")

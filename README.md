@@ -13,6 +13,7 @@ The application currently uses in-memory repositories so it can be developed and
 | Money movement | Deposit and withdraw money |
 | Transfers | Transfer money between two accounts owned by the same customer |
 | History | View deposit, withdrawal, and transfer records for an account |
+| Authentication | Register customers and log in with a JWT bearer token |
 | Validation | Positive money amounts, required names, valid IDs, and sufficient funds |
 
 ## Technology Stack
@@ -23,6 +24,8 @@ The application currently uses in-memory repositories so it can be developed and
 | Spring Boot | 4.1.1 |
 | Spring Web MVC | REST controllers and HTTP endpoints |
 | Spring Validation | Request validation |
+| Spring Security | Password hashing and protected endpoints |
+| JJWT | JSON Web Token creation and verification |
 | Maven Wrapper | Project builds without a global Maven installation |
 | Storage | In-memory repositories |
 
@@ -83,9 +86,11 @@ All endpoints return JSON unless otherwise noted.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
+| `POST` | `/api/auth/register` | Register a customer with login credentials |
+| `POST` | `/api/auth/login` | Authenticate and receive a JWT |
 | `GET` | `/api/customers` | Get all customers |
 | `GET` | `/api/customers/{id}` | Get one customer |
-| `POST` | `/api/customers` | Create a customer |
+| `POST` | `/api/customers` | Create a customer (authenticated/internal flow) |
 | `PUT` | `/api/customers/{id}` | Edit a customer's name |
 | `DELETE` | `/api/customers/{id}` | Delete a customer |
 | `POST` | `/api/accounts` | Create an account |
@@ -94,6 +99,57 @@ All endpoints return JSON unless otherwise noted.
 | `POST` | `/api/accounts/{id}/withdraw` | Withdraw money |
 | `POST` | `/api/accounts/transfer` | Transfer money between accounts |
 | `GET` | `/api/accounts/{id}/transactions` | Get account transaction history |
+
+Protected endpoints require:
+
+```http
+Authorization: Bearer <token>
+```
+
+## Authentication Examples
+
+### Register a customer
+
+```http
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Ada Lovelace",
+  "username": "ada",
+  "password": "password123"
+}
+```
+
+Passwords are hashed with BCrypt and are never returned by the API.
+
+### Log in
+
+```http
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+```
+
+```json
+{
+  "username": "ada",
+  "password": "password123"
+}
+```
+
+Example response:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "customerId": 1,
+  "username": "ada"
+}
+```
+
+Use the returned token in the `Authorization` header for customer and account requests.
 
 ## Customer Examples
 
@@ -374,15 +430,17 @@ The repository interfaces provide the boundary where database-backed implementat
 
 The repository includes a ready-to-import collection at [postman/simple-bank-app.postman_collection.json](postman/simple-bank-app.postman_collection.json).
 
-In Postman, select **Import**, choose that JSON file, and open the **Simple Bank App API** collection. Its requests use the `baseUrl`, `customerId`, `savingsAccountId`, and `checkingAccountId` collection variables.
+In Postman, select **Import**, choose that JSON file, and open the **Simple Bank App API** collection. Its requests use the `baseUrl`, `token`, `customerId`, `savingsAccountId`, and `checkingAccountId` collection variables.
 
 1. Start the API with `./mvnw spring-boot:run` or `.\mvnw.cmd spring-boot:run`.
-2. Create a customer and note its ID.
-3. Create two accounts using that customer ID.
-4. Deposit money into the first account.
-5. Transfer money to the second account.
-6. Check both account balances.
-7. Check transaction history for both accounts.
+2. Run **Authentication -> Register customer**.
+3. Run **Authentication -> Login**. The test script stores the JWT automatically.
+4. Create two accounts using the saved customer ID.
+5. Deposit money into the first account.
+6. Transfer money to the second account.
+7. Check both account balances.
+8. Check transaction history for both accounts.
+9. Run **Cleanup -> Delete customer** last.
 
 For `POST` and `PUT` requests, use:
 
@@ -390,16 +448,16 @@ For `POST` and `PUT` requests, use:
 - Format: `JSON`
 - Header: `Content-Type: application/json`
 
-No authentication header is required yet.
+The collection applies the saved JWT as a bearer token to protected requests automatically.
 
 ## Current Limitations and Next Steps
 
 - Storage is in memory; a database has not been connected.
-- Authentication and login are not implemented.
 - There is no frontend yet.
 - Transfer operations should use a database transaction once persistence is added.
 - The API currently has no centralized error-response format.
-- Account and customer authorization rules will need to be added when authentication is introduced.
+- Account ownership checks should be tightened so authenticated users can only access their own resources.
+- The JWT secret is development-only and must be supplied securely before deployment.
 
 ## Git Workflow
 

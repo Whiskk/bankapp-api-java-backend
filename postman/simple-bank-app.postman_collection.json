@@ -1,13 +1,17 @@
 {
   "info": {
     "name": "Simple Bank App API",
-    "description": "Runnable requests for the Simple Bank App Spring Boot API. Start the backend at http://localhost:8080 before sending requests. Run the customer and account creation requests first so collection variables are populated.",
+    "description": "Runnable requests for the Simple Bank App Spring Boot API. Start the backend at http://localhost:8080 before sending requests. Register and log in first so the JWT is stored for protected requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
       "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": ""
     },
     {
       "key": "customerId",
@@ -22,13 +26,26 @@
       "value": "2"
     }
   ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
   "item": [
     {
-      "name": "Customers",
+      "name": "Authentication",
       "item": [
         {
-          "name": "Create customer",
+          "name": "Register customer",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
               {
@@ -38,7 +55,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Ada Lovelace\"\n}",
+              "raw": "{\n  \"name\": \"Ada Lovelace\",\n  \"username\": \"ada\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -46,13 +63,14 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/api/customers",
+              "raw": "{{baseUrl}}/api/auth/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "customers"
+                "auth",
+                "register"
               ]
             }
           },
@@ -62,7 +80,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Customer created', function () {",
+                  "pm.test('Registration succeeded', function () {",
                   "    pm.response.to.have.status(201);",
                   "});",
                   "",
@@ -73,6 +91,62 @@
             }
           ]
         },
+        {
+          "name": "Login",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"ada\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeded', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const login = pm.response.json();",
+                  "pm.collectionVariables.set('token', login.token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
         {
           "name": "Get all customers",
           "request": {

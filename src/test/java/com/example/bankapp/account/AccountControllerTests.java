@@ -25,7 +25,7 @@ class AccountControllerTests {
     @BeforeEach
     void setUp() {
         InMemoryCustomerRepository customerRepository = new InMemoryCustomerRepository();
-        customerRepository.save(new Customer(1L, "Ada Lovelace"));
+        customerRepository.save(new Customer(1L, "Ada Lovelace", null, null));
         mockMvc = MockMvcBuilders.standaloneSetup(new AccountController(new AccountService(
                 new InMemoryAccountRepository(),
                 new InMemoryAccountTransactionRepository(),

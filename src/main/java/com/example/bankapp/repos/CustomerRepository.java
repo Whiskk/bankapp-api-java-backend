@@ -9,11 +9,11 @@ public interface CustomerRepository {
 
     List<Customer> findAll();
 
-    Optional<Customer> findById(Long id);
+    Optional<Customer> findById(String id);
 
     Optional<Customer> findByUsername(String username);
 
     Customer save(Customer customer);
 
-    boolean deleteById(Long id);
+    boolean deleteById(String id);
 }

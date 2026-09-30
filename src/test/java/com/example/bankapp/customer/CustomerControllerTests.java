@@ -37,7 +37,7 @@ class CustomerControllerTests {
                 .andReturn()
                 .getResponse()
                 .getContentAsString()
-                .replaceAll(".*\\\"id\\\":([0-9]+).*", "$1");
+                .replaceAll(".*\\\"id\\\":\\\"([^\\\"]+)\\\".*", "$1");
 
         mockMvc.perform(get("/api/customers/{id}", customerId))
                 .andExpect(status().isOk())

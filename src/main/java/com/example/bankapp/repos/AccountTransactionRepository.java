@@ -6,7 +6,7 @@ import com.example.bankapp.models.AccountTransaction;
 
 public interface AccountTransactionRepository {
 
-    List<AccountTransaction> findByAccountId(Long accountId);
+    List<AccountTransaction> findByAccountId(String accountId);
 
     AccountTransaction save(AccountTransaction transaction);
 }

@@ -1,4 +1,14 @@
 package com.example.bankapp.models;
 
-public record Customer(Long id, String name, String username, String passwordHash) {
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.FieldType;
+import org.springframework.data.mongodb.core.mapping.MongoId;
+
+@Document("customers")
+public record Customer(
+	@Id @MongoId(targetType = FieldType.OBJECT_ID) String id,
+	String name,
+	String username,
+	String passwordHash) {
 }

@@ -27,13 +27,13 @@ The application currently uses in-memory repositories so it can be developed and
 | Spring Security | Password hashing and protected endpoints |
 | JJWT | JSON Web Token creation and verification |
 | Maven Wrapper | Project builds without a global Maven installation |
-| Storage | In-memory repositories |
+| Storage | MongoDB Atlas through MongoTemplate; in-memory fixtures for unit tests |
 
 ## Prerequisites
 
 - JDK 17 or newer
 - Git
-- No database is required yet
+- A MongoDB Atlas cluster, database user, and password
 - No global Maven installation is required
 
 Check Java from PowerShell:
@@ -41,6 +41,32 @@ Check Java from PowerShell:
 ```powershell
 java --version
 ```
+
+## MongoDB Atlas Setup
+
+The application reads the MongoDB connection string from the `MONGODB_URI` environment variable. Do not commit the URI, username, password, or any other credentials.
+
+In MongoDB Atlas:
+
+1. Open the `simple-bank-app` cluster.
+2. Create or select a database user.
+3. Add your development IP address under **Network Access**.
+4. Choose **Connect -> Drivers**, select Java, and copy the connection string.
+5. Replace the username and password placeholders in the connection string.
+
+Set the URI for the current PowerShell session:
+
+```powershell
+$env:MONGODB_URI = "mongodb+srv://USERNAME:PASSWORD@simple-bank-app.xxxxx.mongodb.net/simplebankapp?retryWrites=true&w=majority"
+```
+
+Then start the application:
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+If the password contains characters such as `@`, `:`, `/`, or `#`, URL-encode the password before placing it in the URI. The application falls back to `mongodb://localhost:27017/simplebankapp` when `MONGODB_URI` is not set, which is useful for local MongoDB development but will not connect to Atlas.
 
 ## Run the Application
 
@@ -170,7 +196,7 @@ Example response:
 
 ```json
 {
-  "id": 1,
+  "id": "671a9b8a8f4b2c1d9a123400",
   "name": "Ada Lovelace"
 }
 ```
@@ -186,13 +212,13 @@ GET http://localhost:8080/api/customers
 ### Get one customer
 
 ```http
-GET http://localhost:8080/api/customers/1
+GET http://localhost:8080/api/customers/671a9b8a8f4b2c1d9a123400
 ```
 
 ### Edit a customer
 
 ```http
-PUT http://localhost:8080/api/customers/1
+PUT http://localhost:8080/api/customers/671a9b8a8f4b2c1d9a123400
 Content-Type: application/json
 ```
 
@@ -207,7 +233,7 @@ Expected status: `200 OK`
 ### Delete a customer
 
 ```http
-DELETE http://localhost:8080/api/customers/1
+DELETE http://localhost:8080/api/customers/671a9b8a8f4b2c1d9a123400
 ```
 
 Expected status: `204 No Content`
@@ -225,7 +251,7 @@ Content-Type: application/json
 
 ```json
 {
-  "userId": 1,
+  "userId": "671a9b8a8f4b2c1d9a123400",
   "accountType": "SAVINGS"
 }
 ```
@@ -239,8 +265,8 @@ Example response:
 
 ```json
 {
-  "id": 1,
-  "userId": 1,
+  "id": "671a9c2e8f4b2c1d9a123456",
+  "userId": "671a9b8a8f4b2c1d9a123400",
   "accountType": "SAVINGS",
   "balance": 0
 }
@@ -251,15 +277,15 @@ Expected status: `201 Created`
 ### Get account details
 
 ```http
-GET http://localhost:8080/api/accounts/1
+GET http://localhost:8080/api/accounts/671a9c2e8f4b2c1d9a123456
 ```
 
 Example response:
 
 ```json
 {
-  "id": 1,
-  "userId": 1,
+  "id": "671a9c2e8f4b2c1d9a123456",
+  "userId": "671a9b8a8f4b2c1d9a123400",
   "accountType": "SAVINGS",
   "balance": 500.00
 }
@@ -270,7 +296,7 @@ Example response:
 ### Deposit money
 
 ```http
-POST http://localhost:8080/api/accounts/1/deposit
+POST http://localhost:8080/api/accounts/671a9c2e8f4b2c1d9a123456/deposit
 Content-Type: application/json
 ```
 
@@ -283,7 +309,7 @@ Content-Type: application/json
 ### Withdraw money
 
 ```http
-POST http://localhost:8080/api/accounts/1/withdraw
+POST http://localhost:8080/api/accounts/671a9c2e8f4b2c1d9a123456/withdraw
 Content-Type: application/json
 ```
 
@@ -297,8 +323,8 @@ Both operations return the updated account:
 
 ```json
 {
-  "id": 1,
-  "userId": 1,
+  "id": "671a9c2e8f4b2c1d9a123456",
+  "userId": "671a9b8a8f4b2c1d9a123400",
   "accountType": "SAVINGS",
   "balance": 300.00
 }
@@ -315,8 +341,8 @@ Content-Type: application/json
 
 ```json
 {
-  "fromAccountId": 1,
-  "toAccountId": 2,
+  "fromAccountId": "671a9c2e8f4b2c1d9a123456",
+  "toAccountId": "671a9c2e8f4b2c1d9a123457",
   "amount": 100.00
 }
 ```
@@ -334,7 +360,7 @@ A transfer:
 ## Transaction History
 
 ```http
-GET http://localhost:8080/api/accounts/1/transactions
+GET http://localhost:8080/api/accounts/671a9c2e8f4b2c1d9a123456/transactions
 ```
 
 Example response:
@@ -342,8 +368,8 @@ Example response:
 ```json
 [
   {
-    "id": 1,
-    "accountId": 1,
+    "id": "671a9d2e8f4b2c1d9a123456",
+    "accountId": "671a9c2e8f4b2c1d9a123456",
     "type": "DEPOSIT",
     "amount": 500.00,
     "balanceAfter": 500.00,
@@ -351,12 +377,12 @@ Example response:
     "createdAt": "2026-09-29T15:30:00Z"
   },
   {
-    "id": 2,
-    "accountId": 1,
+    "id": "671a9d2e8f4b2c1d9a123457",
+    "accountId": "671a9c2e8f4b2c1d9a123456",
     "type": "TRANSFER",
     "amount": 100.00,
     "balanceAfter": 400.00,
-    "relatedAccountId": 2,
+    "relatedAccountId": "671a9c2e8f4b2c1d9a123457",
     "createdAt": "2026-09-29T15:35:00Z"
   }
 ]
@@ -382,7 +408,7 @@ Transaction types currently include:
 - Transfers must use two different accounts.
 - Transfers are allowed only between accounts belonging to the same customer.
 - Each successful deposit, withdrawal, and transfer creates transaction history.
-- Data is lost when the application restarts because storage is currently in memory.
+- MongoDB data persists across application restarts when `MONGODB_URI` is configured; in-memory test fixtures reset between runs.
 
 ## Project Structure
 
@@ -407,7 +433,10 @@ src/
 │   │   │   ├── AccountRepository.java
 │   │   │   ├── AccountTransactionRepository.java
 │   │   │   ├── CustomerRepository.java
-│   │   │   └── in-memory implementations
+│   │   │   ├── MongoAccountRepository.java
+│   │   │   ├── MongoAccountTransactionRepository.java
+│   │   │   ├── MongoCustomerRepository.java
+│   │   │   └── in-memory test implementations
 │   │   ├── services/
 │   │   │   ├── AccountService.java
 │   │   │   └── CustomerService.java
@@ -421,7 +450,7 @@ src/
 The application follows a layered MVC design:
 
 ```text
-Controller -> Service -> Repository -> In-memory storage
+Controller -> Service -> Repository -> MongoDB Atlas
 ```
 
 The repository interfaces provide the boundary where database-backed implementations can be introduced later.
@@ -452,7 +481,8 @@ The collection applies the saved JWT as a bearer token to protected requests aut
 
 ## Current Limitations and Next Steps
 
-- Storage is in memory; a database has not been connected.
+- In-memory repositories remain available for unit tests; the running application uses MongoDB through the configured URI.
+- MongoDB Atlas is configured through `MONGODB_URI`; set that variable before using persistent storage.
 - There is no frontend yet.
 - Transfer operations should use a database transaction once persistence is added.
 - The API currently has no centralized error-response format.

@@ -41,17 +41,17 @@ public class AccountController {
     }
 
     @GetMapping("/{id}")
-    public Account getAccountDetails(@PathVariable Long id) {
+    public Account getAccountDetails(@PathVariable String id) {
         return accountService.getAccountById(id);
     }
 
     @PostMapping("/{id}/deposit")
-    public Account depositMoney(@PathVariable Long id, @Valid @RequestBody MoneyRequest request) {
+    public Account depositMoney(@PathVariable String id, @Valid @RequestBody MoneyRequest request) {
         return accountService.deposit(id, request);
     }
 
     @PostMapping("/{id}/withdraw")
-    public Account withdrawMoney(@PathVariable Long id, @Valid @RequestBody MoneyRequest request) {
+    public Account withdrawMoney(@PathVariable String id, @Valid @RequestBody MoneyRequest request) {
         return accountService.withdraw(id, request);
     }
 
@@ -61,7 +61,7 @@ public class AccountController {
     }
 
     @GetMapping("/{id}/transactions")
-    public List<AccountTransaction> getTransactionHistory(@PathVariable Long id) {
+    public List<AccountTransaction> getTransactionHistory(@PathVariable String id) {
         return accountService.getTransactions(id);
     }
 }

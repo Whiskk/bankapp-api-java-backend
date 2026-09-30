@@ -25,7 +25,7 @@ class AccountControllerTests {
     @BeforeEach
     void setUp() {
         InMemoryCustomerRepository customerRepository = new InMemoryCustomerRepository();
-        customerRepository.save(new Customer(1L, "Ada Lovelace", null, null));
+        customerRepository.save(new Customer("test-customer", "Ada Lovelace", null, null));
         mockMvc = MockMvcBuilders.standaloneSetup(new AccountController(new AccountService(
                 new InMemoryAccountRepository(),
                 new InMemoryAccountTransactionRepository(),
@@ -63,10 +63,10 @@ class AccountControllerTests {
 
         mockMvc.perform(post("/api/accounts/transfer")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fromAccountId\":" + savingsId
-                                + ",\"toAccountId\":" + checkingId + ",\"amount\":100}"))
+                        .content("{\"fromAccountId\":\"" + savingsId
+                                + "\",\"toAccountId\":\"" + checkingId + "\",\"amount\":100}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(Integer.parseInt(savingsId)))
+                .andExpect(jsonPath("$.id").value(savingsId))
                 .andExpect(jsonPath("$.balance").value(200));
 
         mockMvc.perform(get("/api/accounts/{id}", checkingId))
@@ -76,22 +76,22 @@ class AccountControllerTests {
         mockMvc.perform(get("/api/accounts/{id}/transactions", savingsId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[2].type").value("TRANSFER"))
-                .andExpect(jsonPath("$[2].relatedAccountId").value(Integer.parseInt(checkingId)));
+                .andExpect(jsonPath("$[2].relatedAccountId").value(checkingId));
 
         mockMvc.perform(get("/api/accounts/{id}/transactions", checkingId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].type").value("TRANSFER"))
-                .andExpect(jsonPath("$[0].relatedAccountId").value(Integer.parseInt(savingsId)));
+                .andExpect(jsonPath("$[0].relatedAccountId").value(savingsId));
     }
 
     private String createAccount(String accountType) throws Exception {
         return mockMvc.perform(post("/api/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"userId\":1,\"accountType\":\"" + accountType + "\"}"))
+                        .content("{\"userId\":\"test-customer\",\"accountType\":\"" + accountType + "\"}"))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
                 .getContentAsString()
-                .replaceAll(".*\\\"id\\\":([0-9]+).*", "$1");
+                .replaceAll(".*\\\"id\\\":\\\"([^\\\"]+)\\\".*", "$1");
     }
 }

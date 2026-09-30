@@ -270,7 +270,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": {{customerId}},\n  \"accountType\": \"SAVINGS\"\n}",
+              "raw": "{\n  \"userId\": \"{{customerId}}\",\n  \"accountType\": \"SAVINGS\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -317,7 +317,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": {{customerId}},\n  \"accountType\": \"CHECKING\"\n}",
+              "raw": "{\n  \"userId\": \"{{customerId}}\",\n  \"accountType\": \"CHECKING\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -492,7 +492,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"fromAccountId\": {{savingsAccountId}},\n  \"toAccountId\": {{checkingAccountId}},\n  \"amount\": 100.00\n}",
+              "raw": "{\n  \"fromAccountId\": \"{{savingsAccountId}}\",\n  \"toAccountId\": \"{{checkingAccountId}}\",\n  \"amount\": 100.00\n}",
               "options": {
                 "raw": {
                   "language": "json"

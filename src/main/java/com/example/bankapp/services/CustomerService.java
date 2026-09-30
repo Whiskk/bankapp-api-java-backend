@@ -23,7 +23,7 @@ public class CustomerService {
         return customerRepository.findAll();
     }
 
-    public Customer getCustomerById(Long id) {
+    public Customer getCustomerById(String id) {
         return findCustomer(id);
     }
 
@@ -31,25 +31,24 @@ public class CustomerService {
         return customerRepository.save(new Customer(null, request.name(), null, null));
     }
 
-    public Customer updateCustomer(Long id, CustomerRequest request) {
-        findCustomer(id);
+    public Customer updateCustomer(String id, CustomerRequest request) {
         Customer customer = findCustomer(id);
         return customerRepository.save(new Customer(
             id, request.name(), customer.username(), customer.passwordHash()));
     }
 
-    public void deleteCustomer(Long id) {
+    public void deleteCustomer(String id) {
         if (!customerRepository.deleteById(id)) {
             throw notFound(id);
         }
     }
 
-    private Customer findCustomer(Long id) {
+    private Customer findCustomer(String id) {
         return customerRepository.findById(id)
                 .orElseThrow(() -> notFound(id));
     }
 
-    private ResponseStatusException notFound(Long id) {
-        return new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer %d was not found".formatted(id));
+    private ResponseStatusException notFound(String id) {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer %s was not found".formatted(id));
     }
 }

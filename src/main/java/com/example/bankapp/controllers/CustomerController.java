@@ -38,7 +38,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    public CustomerResponse getCustomerById(@PathVariable Long id) {
+    public CustomerResponse getCustomerById(@PathVariable String id) {
         return CustomerResponse.from(customerService.getCustomerById(id));
     }
 
@@ -53,12 +53,12 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    public CustomerResponse putCustomer(@PathVariable Long id, @Valid @RequestBody CustomerRequest request) {
+    public CustomerResponse putCustomer(@PathVariable String id, @Valid @RequestBody CustomerRequest request) {
         return CustomerResponse.from(customerService.updateCustomer(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteCustomer(@PathVariable String id) {
         customerService.deleteCustomer(id);
         return ResponseEntity.noContent().build();
     }

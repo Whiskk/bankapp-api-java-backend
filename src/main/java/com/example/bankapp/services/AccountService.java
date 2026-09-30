@@ -42,15 +42,15 @@ public class AccountService {
         return accountRepository.save(new Account(null, request.userId(), request.accountType(), BigDecimal.ZERO));
     }
 
-    public Account getAccountById(Long id) {
+    public Account getAccountById(String id) {
         return findAccount(id);
     }
 
-    public Account deposit(Long id, MoneyRequest request) {
+    public Account deposit(String id, MoneyRequest request) {
         return applyTransaction(id, request.amount(), TransactionType.DEPOSIT);
     }
 
-    public Account withdraw(Long id, MoneyRequest request) {
+    public Account withdraw(String id, MoneyRequest request) {
         Account account = findAccount(id);
         if (account.balance().compareTo(request.amount()) < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds");
@@ -93,12 +93,12 @@ public class AccountService {
         return updatedSource;
     }
 
-    public List<AccountTransaction> getTransactions(Long id) {
+    public List<AccountTransaction> getTransactions(String id) {
         findAccount(id);
         return transactionRepository.findByAccountId(id);
     }
 
-    private Account applyTransaction(Long id, BigDecimal amount, TransactionType type) {
+    private Account applyTransaction(String id, BigDecimal amount, TransactionType type) {
         Account account = findAccount(id);
         BigDecimal balanceChange = type == TransactionType.DEPOSIT ? amount : amount.negate();
         BigDecimal newBalance = account.balance().add(balanceChange);
@@ -109,9 +109,9 @@ public class AccountService {
         return updatedAccount;
     }
 
-    private Account findAccount(Long id) {
+    private Account findAccount(String id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Account %d was not found".formatted(id)));
+                        HttpStatus.NOT_FOUND, "Account %s was not found".formatted(id)));
     }
 }

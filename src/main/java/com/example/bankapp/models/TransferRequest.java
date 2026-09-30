@@ -8,10 +8,10 @@ import jakarta.validation.constraints.Positive;
 
 public record TransferRequest(
     @NotNull
-    Long fromAccountId,
+    String fromAccountId,
 
     @NotNull
-    Long toAccountId,
+    String toAccountId,
 
     @NotNull
     @Positive

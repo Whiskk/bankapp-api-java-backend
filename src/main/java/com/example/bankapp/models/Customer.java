@@ -10,5 +10,14 @@ public record Customer(
 	@Id @MongoId(targetType = FieldType.OBJECT_ID) String id,
 	String name,
 	String username,
-	String passwordHash) {
+	String passwordHash,
+	Boolean admin) {
+
+	public Customer {
+		admin = Boolean.TRUE.equals(admin);
+	}
+
+	public Customer(String id, String name, String username, String passwordHash) {
+		this(id, name, username, passwordHash, false);
+	}
 }

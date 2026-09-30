@@ -32,7 +32,9 @@ public class CustomerService {
     }
 
     public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
+        return customerRepository.findAll().stream()
+            .filter(customer -> !customer.admin())
+            .toList();
     }
 
     public Customer getCustomerById(String id) {
@@ -46,12 +48,15 @@ public class CustomerService {
     public Customer updateCustomer(String id, CustomerRequest request) {
         Customer customer = findCustomer(id);
         return customerRepository.save(new Customer(
-            id, request.name(), customer.username(), customer.passwordHash()));
+            id, request.name(), customer.username(), customer.passwordHash(), customer.admin()));
     }
 
     @Transactional
     public void deleteCustomer(String id) {
-        findCustomer(id);
+        Customer customer = findCustomer(id);
+        if (customer.admin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The admin account cannot be deleted");
+        }
 
         List<Account> accounts = accountRepository.findByUserId(id);
         List<String> accountIds = accounts.stream()

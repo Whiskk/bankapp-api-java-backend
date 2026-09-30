@@ -32,7 +32,8 @@ public class InMemoryCustomerRepository implements CustomerRepository {
     @Override
     public Customer save(Customer customer) {
         String id = customer.id() == null ? UUID.randomUUID().toString() : customer.id();
-        Customer savedCustomer = new Customer(id, customer.name(), customer.username(), customer.passwordHash());
+        Customer savedCustomer = new Customer(
+            id, customer.name(), customer.username(), customer.passwordHash(), customer.admin());
         customers.put(id, savedCustomer);
         return savedCustomer;
     }

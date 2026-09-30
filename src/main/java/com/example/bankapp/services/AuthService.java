@@ -53,7 +53,16 @@ public class AuthService {
         return new LoginResponse(
                 jwtService.createToken(customer.username()),
                 customer.id(),
-                customer.username());
+                customer.username(),
+                customer.admin());
+    }
+
+    public LoginResponse adminLogin(LoginRequest request) {
+        LoginResponse response = login(request);
+        if (!response.admin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
+        }
+        return response;
     }
 
     private ResponseStatusException invalidCredentials() {

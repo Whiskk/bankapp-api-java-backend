@@ -5,12 +5,14 @@ import java.time.Instant;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.bankapp.models.Account;
 import com.example.bankapp.models.AccountRequest;
 import com.example.bankapp.models.AccountTransaction;
+import com.example.bankapp.models.Customer;
 import com.example.bankapp.models.MoneyRequest;
 import com.example.bankapp.models.TransactionType;
 import com.example.bankapp.models.TransferRequest;
@@ -34,7 +36,8 @@ public class AccountService {
         this.customerRepository = customerRepository;
     }
 
-    public Account createAccount(AccountRequest request) {
+    public Account createAccount(AccountRequest request, Authentication authentication) {
+        requireCustomerAccess(request.userId(), authentication);
         if (customerRepository.findById(request.userId()).isEmpty()) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "Customer %d was not found".formatted(request.userId()));
@@ -42,29 +45,40 @@ public class AccountService {
         return accountRepository.save(new Account(null, request.userId(), request.accountType(), BigDecimal.ZERO));
     }
 
-    public Account getAccountById(String id) {
-        return findAccount(id);
+    public Account getAccountById(String id, Authentication authentication) {
+        Account account = findAccount(id);
+        requireCustomerAccess(account.userId(), authentication);
+        return account;
     }
 
     public List<Account> getAccountsForCustomer(String userId) {
         return accountRepository.findByUserId(userId);
     }
 
-    public Account deposit(String id, MoneyRequest request) {
+    public List<Account> getAccountsForUsername(String username) {
+        Customer customer = customerRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        return accountRepository.findByUserId(customer.id());
+    }
+
+    public Account deposit(String id, MoneyRequest request, Authentication authentication) {
+        requireCustomerAccess(findAccount(id).userId(), authentication);
         return applyTransaction(id, request.amount(), TransactionType.DEPOSIT);
     }
 
-    public Account withdraw(String id, MoneyRequest request) {
+    public Account withdraw(String id, MoneyRequest request, Authentication authentication) {
         Account account = findAccount(id);
+        requireCustomerAccess(account.userId(), authentication);
         if (account.balance().compareTo(request.amount()) < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient funds");
         }
         return applyTransaction(id, request.amount(), TransactionType.WITHDRAWAL);
     }
 
-    public Account transfer(TransferRequest request) {
+    public Account transfer(TransferRequest request, Authentication authentication) {
         Account sourceAccount = findAccount(request.fromAccountId());
         Account targetAccount = findAccount(request.toAccountId());
+        requireCustomerAccess(sourceAccount.userId(), authentication);
 
         if (sourceAccount.id().equals(targetAccount.id())) {
             throw new ResponseStatusException(
@@ -97,8 +111,8 @@ public class AccountService {
         return updatedSource;
     }
 
-    public List<AccountTransaction> getTransactions(String id) {
-        findAccount(id);
+    public List<AccountTransaction> getTransactions(String id, Authentication authentication) {
+        requireCustomerAccess(findAccount(id).userId(), authentication);
         return transactionRepository.findByAccountId(id);
     }
 
@@ -117,5 +131,19 @@ public class AccountService {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Account %s was not found".formatted(id)));
+    }
+
+    private void requireCustomerAccess(String customerId, Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+        if (isAdmin) {
+            return;
+        }
+
+        Customer customer = customerRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        if (!customer.id().equals(customerId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot access another customer's account");
+        }
     }
 }

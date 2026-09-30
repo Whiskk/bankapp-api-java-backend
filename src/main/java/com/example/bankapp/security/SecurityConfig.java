@@ -2,6 +2,7 @@ package com.example.bankapp.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -27,7 +28,7 @@ public class SecurityConfig {
         return username -> customerRepository.findByUsername(username)
                 .map(customer -> User.withUsername(customer.username())
                         .password(customer.passwordHash())
-                        .authorities("ROLE_USER")
+                        .authorities(customer.admin() ? "ROLE_ADMIN" : "ROLE_USER")
                         .build())
                 .orElseThrow(() -> new UsernameNotFoundException("Customer was not found"));
     }
@@ -41,6 +42,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/customers/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/accounts").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

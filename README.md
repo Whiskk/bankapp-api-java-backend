@@ -88,7 +88,19 @@ The API starts at:
 http://localhost:8080
 ```
 
-There is currently no frontend or root page. Opening `http://localhost:8080/` may show Spring Boot's Whitelabel 404 page. Use one of the API routes below instead.
+Opening `http://localhost:8080/` may show Spring Boot's Whitelabel 404 page. Use one of the API routes below instead.
+
+### Configure the admin login
+
+Set these variables in the backend terminal before starting the application. The app creates or updates the configured admin customer at startup and stores the password as a BCrypt hash. The configured username must not already belong to a regular customer.
+
+```powershell
+$env:ADMIN_USERNAME = "bank-admin"
+$env:ADMIN_PASSWORD = "<choose a strong password>"
+.\mvnw.cmd spring-boot:run
+```
+
+If either variable is missing, no admin account is created. Never commit the password or add it to frontend code.
 
 ## Run Tests
 
@@ -171,11 +183,12 @@ Example response:
 {
   "token": "eyJhbGciOiJIUzI1NiJ9...",
   "customerId": 1,
-  "username": "ada"
+  "username": "ada",
+  "admin": false
 }
 ```
 
-Use the returned token in the `Authorization` header for customer and account requests.
+Regular sign-in is available at `/api/auth/login`. Admin sign-in uses `/api/auth/admin/login` and rejects non-admin customers. Use the returned token in the `Authorization` header.
 
 ## Customer Examples
 
@@ -207,6 +220,14 @@ Expected status: `201 Created`
 
 ```http
 GET http://localhost:8080/api/customers
+```
+
+This endpoint requires an admin token. Admins can list a customer's accounts with `GET /api/accounts?userId=<customerId>`.
+
+Regular customers can list only their own accounts with:
+
+```http
+GET http://localhost:8080/api/accounts/me
 ```
 
 ### Get one customer

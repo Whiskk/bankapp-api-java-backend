@@ -5,6 +5,7 @@ import java.util.List;
 import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,8 +33,10 @@ public class AccountController {
     }
 
     @PostMapping
-    public ResponseEntity<Account> createAccount(@Valid @RequestBody AccountRequest request) {
-        Account account = accountService.createAccount(request);
+    public ResponseEntity<Account> createAccount(
+            @Valid @RequestBody AccountRequest request,
+            Authentication authentication) {
+        Account account = accountService.createAccount(request, authentication);
         var location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(account.id())
@@ -46,28 +49,39 @@ public class AccountController {
         return accountService.getAccountsForCustomer(userId);
     }
 
+    @GetMapping("/me")
+    public List<Account> getMyAccounts(Authentication authentication) {
+        return accountService.getAccountsForUsername(authentication.getName());
+    }
+
     @GetMapping("/{id}")
-    public Account getAccountDetails(@PathVariable String id) {
-        return accountService.getAccountById(id);
+    public Account getAccountDetails(@PathVariable String id, Authentication authentication) {
+        return accountService.getAccountById(id, authentication);
     }
 
     @PostMapping("/{id}/deposit")
-    public Account depositMoney(@PathVariable String id, @Valid @RequestBody MoneyRequest request) {
-        return accountService.deposit(id, request);
+    public Account depositMoney(
+            @PathVariable String id,
+            @Valid @RequestBody MoneyRequest request,
+            Authentication authentication) {
+        return accountService.deposit(id, request, authentication);
     }
 
     @PostMapping("/{id}/withdraw")
-    public Account withdrawMoney(@PathVariable String id, @Valid @RequestBody MoneyRequest request) {
-        return accountService.withdraw(id, request);
+    public Account withdrawMoney(
+            @PathVariable String id,
+            @Valid @RequestBody MoneyRequest request,
+            Authentication authentication) {
+        return accountService.withdraw(id, request, authentication);
     }
 
     @PostMapping("/transfer")
-    public Account transferMoney(@Valid @RequestBody TransferRequest request) {
-        return accountService.transfer(request);
+    public Account transferMoney(@Valid @RequestBody TransferRequest request, Authentication authentication) {
+        return accountService.transfer(request, authentication);
     }
 
     @GetMapping("/{id}/transactions")
-    public List<AccountTransaction> getTransactionHistory(@PathVariable String id) {
-        return accountService.getTransactions(id);
+    public List<AccountTransaction> getTransactionHistory(@PathVariable String id, Authentication authentication) {
+        return accountService.getTransactions(id, authentication);
     }
 }

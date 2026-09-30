@@ -274,6 +274,14 @@ Example response:
 
 Expected status: `201 Created`
 
+### List a customer's accounts
+
+```http
+GET http://localhost:8080/api/accounts?userId=671a9b8a8f4b2c1d9a123400
+```
+
+The response is a list of accounts, each including its `accountType` and current `balance`.
+
 ### Get account details
 
 ```http

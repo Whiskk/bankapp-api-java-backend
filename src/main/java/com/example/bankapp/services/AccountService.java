@@ -46,6 +46,10 @@ public class AccountService {
         return findAccount(id);
     }
 
+    public List<Account> getAccountsForCustomer(String userId) {
+        return accountRepository.findByUserId(userId);
+    }
+
     public Account deposit(String id, MoneyRequest request) {
         return applyTransaction(id, request.amount(), TransactionType.DEPOSIT);
     }

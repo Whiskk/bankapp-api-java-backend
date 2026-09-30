@@ -1,8 +1,11 @@
 package com.example.bankapp.repos;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
 
 import com.example.bankapp.models.Account;
@@ -22,7 +25,19 @@ public class MongoAccountRepository implements AccountRepository {
     }
 
     @Override
+    public List<Account> findByUserId(String userId) {
+        Query query = Query.query(Criteria.where("userId").is(userId));
+        return mongoTemplate.find(query, Account.class);
+    }
+
+    @Override
     public Account save(Account account) {
         return mongoTemplate.save(account);
+    }
+
+    @Override
+    public boolean deleteByUserId(String userId) {
+        Query query = Query.query(Criteria.where("userId").is(userId));
+        return mongoTemplate.remove(query, Account.class).getDeletedCount() > 0;
     }
 }

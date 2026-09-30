@@ -1,5 +1,6 @@
 package com.example.bankapp.repos;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -27,5 +28,11 @@ public class MongoAccountTransactionRepository implements AccountTransactionRepo
     @Override
     public AccountTransaction save(AccountTransaction transaction) {
         return mongoTemplate.save(transaction);
+    }
+
+    @Override
+    public long deleteByAccountIdIn(Collection<String> accountIds) {
+        Query query = Query.query(Criteria.where("accountId").in(accountIds));
+        return mongoTemplate.remove(query, AccountTransaction.class).getDeletedCount();
     }
 }

@@ -1,20 +1,21 @@
-# Bank App API
+# Simple Bank App API
 
-A small Spring Boot REST API for managing customers, bank accounts, balances, and account transaction history.
+A Spring Boot REST API for the [React frontend](../bankapp-react-frontend/README.md), managing customers, accounts, balances, transfers, and transaction history.
 
-The application currently uses in-memory repositories so it can be developed and tested without a database. The repository interfaces are already separated from the services, making a future database migration straightforward.
+The running application uses MongoDB via `MongoTemplate`; in-memory repositories and mocks are used in tests. The frontend and backend are separate repositories and run in separate terminals.
 
 ## Current Features
 
 | Area | Supported operations |
 | --- | --- |
-| Customers | Create, list, retrieve, edit, and delete customers |
-| Accounts | Create accounts for customers and retrieve account details |
+| Customers | Register, view or edit your profile; admin-only customer management |
+| Accounts | Open, list, view, and delete zero-balance accounts |
 | Money movement | Deposit and withdraw money |
 | Transfers | Transfer money between two accounts owned by the same customer |
 | History | View deposit, withdrawal, and transfer records for an account |
-| Authentication | Register customers and log in with a JWT bearer token |
-| Validation | Positive money amounts, required names, valid IDs, and sufficient funds |
+| Authentication | Customer/admin login, BCrypt password hashes, and JWT bearer tokens |
+| Authorization | Owners access their accounts; admins can manage customers' accounts |
+| Validation | Positive money amounts, required fields, ownership, sufficient funds, and zero-balance deletion |
 
 ## Technology Stack
 
@@ -32,8 +33,7 @@ The application currently uses in-memory repositories so it can be developed and
 ## Prerequisites
 
 - JDK 17 or newer
-- Git
-- A MongoDB Atlas cluster, database user, and password
+- A reachable MongoDB deployment (the current configuration targets Atlas)
 - No global Maven installation is required
 
 Check Java from PowerShell:
@@ -42,53 +42,30 @@ Check Java from PowerShell:
 java --version
 ```
 
-## MongoDB Atlas Setup
+## Run Locally
 
-The application reads the MongoDB connection string from the `MONGODB_URI` environment variable. Do not commit the URI, username, password, or any other credentials.
-
-In MongoDB Atlas:
-
-1. Open the `simple-bank-app` cluster.
-2. Create or select a database user.
-3. Add your development IP address under **Network Access**.
-4. Choose **Connect -> Drivers**, select Java, and copy the connection string.
-5. Replace the username and password placeholders in the connection string.
-
-Set the URI for the current PowerShell session:
+The backend needs MongoDB. In Atlas, create a database user, allow your development IP under Network Access, and obtain a Java driver connection URI. On Windows PowerShell, set the connection and a signing key in **the backend terminal** before starting the API:
 
 ```powershell
-$env:MONGODB_URI = "mongodb+srv://USERNAME:PASSWORD@simple-bank-app.xxxxx.mongodb.net/simplebankapp?retryWrites=true&w=majority"
+$env:SPRING_MONGODB_URI = "<your MongoDB connection URI>"
+$env:APP_JWT_SECRET = "<your long random signing key>"
 ```
 
-Then start the application:
+Spring Boot uses these environment variables to override `spring.mongodb.uri` and `app.jwt.secret`. Use a signing key of at least 32 bytes. The current tracked `application.properties` contains literal development values, **not** `MONGODB_URI` substitution or a localhost fallback. Rotate any exposed database credential and signing key, remove secrets from tracked configuration before deployment, and do not export or commit your environment variables. Changing the signing key invalidates previously issued JWTs.
+
+From the backend project root on Windows:
 
 ```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-If the password contains characters such as `@`, `:`, `/`, or `#`, URL-encode the password before placing it in the URI. The application falls back to `mongodb://localhost:27017/simplebankapp` when `MONGODB_URI` is not set, which is useful for local MongoDB development but will not connect to Atlas.
-
-## Run the Application
-
-From the project root on Windows:
-
-```powershell
-.\mvnw.cmd spring-boot:run
-```
-
-On macOS or Linux:
+On macOS or Linux, set `SPRING_MONGODB_URI` and `APP_JWT_SECRET` in that shell and run:
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-The API starts at:
-
-```text
-http://localhost:8080
-```
-
-Opening `http://localhost:8080/` may show Spring Boot's Whitelabel 404 page. Use one of the API routes below instead.
+The API listens at `http://localhost:8080`. The root URL has no frontend page; run the [React app](../bankapp-react-frontend/README.md#run-locally) separately, typically at `http://localhost:5173`.
 
 ### Configure the admin login
 
@@ -100,7 +77,7 @@ $env:ADMIN_PASSWORD = "<choose a strong password>"
 .\mvnw.cmd spring-boot:run
 ```
 
-If either variable is missing, no admin account is created. Never commit the password or add it to frontend code.
+If both variables are absent, no admin account is created or updated. Providing only one causes startup to fail. Never commit the password or add it to frontend code.
 
 ## Run Tests
 
@@ -122,26 +99,27 @@ Maven includes focused customer-profile and JWT identity tests. Run the Postman 
 
 All endpoints return JSON unless otherwise noted.
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `POST` | `/api/auth/register` | Register a customer with login credentials |
-| `POST` | `/api/auth/login` | Authenticate and receive a JWT |
-| `GET` | `/api/customers/me` | Get the signed-in customer's profile |
-| `PUT` | `/api/customers/me` | Edit the signed-in customer's name, username, or password |
-| `GET` | `/api/customers` | Get all customers |
-| `GET` | `/api/customers/{id}` | Get one customer |
-| `POST` | `/api/customers` | Create a customer (authenticated/internal flow) |
-| `PUT` | `/api/customers/{id}` | Edit a customer's name |
-| `DELETE` | `/api/customers/{id}` | Delete a customer |
-| `POST` | `/api/accounts` | Create an account |
-| `GET` | `/api/accounts/me` | Get the signed-in customer's accounts |
-| `GET` | `/api/accounts?userId={id}` | List a customer's accounts (admin only) |
-| `GET` | `/api/accounts/{id}` | Get account details |
-| `DELETE` | `/api/accounts/{id}` | Delete an account only when its balance is zero |
-| `POST` | `/api/accounts/{id}/deposit` | Deposit money |
-| `POST` | `/api/accounts/{id}/withdraw` | Withdraw money |
-| `POST` | `/api/accounts/transfer` | Transfer money between accounts |
-| `GET` | `/api/accounts/{id}/transactions` | Get account transaction history |
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/api/auth/register` | Public | Register a regular customer |
+| `POST` | `/api/auth/login` | Public | Log in and receive a JWT |
+| `POST` | `/api/auth/admin/login` | Public (admin credentials required) | Log in as an admin |
+| `GET` | `/api/customers/me` | Customer | Get your profile |
+| `PUT` | `/api/customers/me` | Customer | Change your name, username, or password |
+| `GET` | `/api/customers` | Admin | List non-admin customers |
+| `GET` | `/api/customers/{id}` | Admin | Get a customer |
+| `POST` | `/api/customers` | Admin | Create a name-only customer record |
+| `PUT` | `/api/customers/{id}` | Admin | Edit a customer's name |
+| `DELETE` | `/api/customers/{id}` | Admin | Delete a customer and their accounts |
+| `POST` | `/api/accounts` | Owner or admin | Open a Savings or Checking account |
+| `GET` | `/api/accounts/me` | Authenticated | List accounts belonging to the signed-in user |
+| `GET` | `/api/accounts?userId={id}` | Admin | List a customer's accounts |
+| `GET` | `/api/accounts/{id}` | Owner or admin | Get account details |
+| `DELETE` | `/api/accounts/{id}` | Owner or admin | Delete a zero-balance account |
+| `POST` | `/api/accounts/{id}/deposit` | Owner or admin | Deposit funds |
+| `POST` | `/api/accounts/{id}/withdraw` | Owner or admin | Withdraw funds |
+| `POST` | `/api/accounts/transfer` | Source owner or admin | Transfer between two accounts of the same customer |
+| `GET` | `/api/accounts/{id}/transactions` | Owner or admin | Get account transaction history |
 
 Protected endpoints require:
 
@@ -189,7 +167,7 @@ Example response:
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiJ9...",
-  "customerId": 1,
+  "customerId": "671a9b8a8f4b2c1d9a123400",
   "username": "ada",
   "admin": false
 }
@@ -204,6 +182,7 @@ Regular sign-in is available at `/api/auth/login`. Admin sign-in uses `/api/auth
 ```http
 POST http://localhost:8080/api/customers
 Content-Type: application/json
+Authorization: Bearer <admin token>
 ```
 
 ```json
@@ -217,11 +196,14 @@ Example response:
 ```json
 {
   "id": "671a9b8a8f4b2c1d9a123400",
-  "name": "Ada Lovelace"
+  "name": "Ada Lovelace",
+  "username": null
 }
 ```
 
 Expected status: `201 Created`
+
+This admin-only endpoint creates a name-only record; it does not give the customer login credentials. Use `/api/auth/register` to create a customer who can sign in.
 
 ### Get all customers
 
@@ -242,6 +224,8 @@ GET http://localhost:8080/api/accounts/me
 ```http
 GET http://localhost:8080/api/customers/671a9b8a8f4b2c1d9a123400
 ```
+
+Customer-by-ID routes require an admin token; customers use `/api/customers/me` for their own profile.
 
 ### Edit your profile
 

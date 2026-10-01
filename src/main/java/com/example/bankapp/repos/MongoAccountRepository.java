@@ -1,5 +1,6 @@
 package com.example.bankapp.repos;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,6 +34,12 @@ public class MongoAccountRepository implements AccountRepository {
     @Override
     public Account save(Account account) {
         return mongoTemplate.save(account);
+    }
+
+    @Override
+    public boolean deleteByIdIfZeroBalance(String id) {
+        Query query = Query.query(Criteria.where("_id").is(id).and("balance").is(BigDecimal.ZERO));
+        return mongoTemplate.remove(query, Account.class).getDeletedCount() > 0;
     }
 
     @Override

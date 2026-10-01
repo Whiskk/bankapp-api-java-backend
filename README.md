@@ -137,6 +137,7 @@ All endpoints return JSON unless otherwise noted.
 | `GET` | `/api/accounts/me` | Get the signed-in customer's accounts |
 | `GET` | `/api/accounts?userId={id}` | List a customer's accounts (admin only) |
 | `GET` | `/api/accounts/{id}` | Get account details |
+| `DELETE` | `/api/accounts/{id}` | Delete an account only when its balance is zero |
 | `POST` | `/api/accounts/{id}/deposit` | Deposit money |
 | `POST` | `/api/accounts/{id}/withdraw` | Withdraw money |
 | `POST` | `/api/accounts/transfer` | Transfer money between accounts |
@@ -347,6 +348,15 @@ Example response:
 }
 ```
 
+### Delete an empty account
+
+```http
+DELETE http://localhost:8080/api/accounts/671a9c2e8f4b2c1d9a123456
+Authorization: Bearer <token>
+```
+
+The account owner or an admin can delete it only if its current balance is zero. Success returns `204 No Content`; a nonzero balance returns `409 Conflict`. Deleting an account also removes its transaction history.
+
 ## Deposits and Withdrawals
 
 ### Deposit money
@@ -519,7 +529,7 @@ In Postman, select **Import**, choose that JSON file, and open the **Simple Bank
 
 Run the **entire collection in order** with the Collection Runner. The first registration generates new usernames for that run, and subsequent requests reuse them; no database reset is needed. The scripts save the customer tokens and account IDs for dependent requests. Do not run individual requests out of order without first running their prerequisites. Both registered customers and their accounts remain in the database after each run. Each run uses fresh usernames, so the collection can run again against the same database.
 
-The collection checks duplicate-username rejection, regular login, account creation/reads, balances and transaction history, self-only account listings, unauthorized cross-customer account access, and customer profile edits with password verification. Account operations use the owning customer's token. Admin-only customer management and account-list-by-customer requests are not included in this run.
+The collection checks duplicate-username rejection, regular login, account creation/reads/deletion, balances and transaction history, self-only account listings, unauthorized cross-customer account access, and customer profile edits with password verification. Account operations use the owning customer's token. Admin-only customer management and account-list-by-customer requests are not included in this run.
 
 For `POST` and `PUT` requests, use:
 

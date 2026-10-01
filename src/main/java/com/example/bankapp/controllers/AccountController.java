@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -57,6 +58,12 @@ public class AccountController {
     @GetMapping("/{id}")
     public Account getAccountDetails(@PathVariable String id, Authentication authentication) {
         return accountService.getAccountById(id, authentication);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAccount(@PathVariable String id, Authentication authentication) {
+        accountService.deleteAccount(id, authentication);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/deposit")

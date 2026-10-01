@@ -13,5 +13,7 @@ public interface AccountRepository {
 
     Account save(Account account);
 
+    boolean deleteByIdIfZeroBalance(String id);
+
     boolean deleteByUserId(String userId);
 }

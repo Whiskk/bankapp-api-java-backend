@@ -99,7 +99,7 @@
                   "const runId = pm.variables.replaceIn('{{$guid}}');",
                   "pm.collectionVariables.set('runUsername', 'ada-' + runId);",
                   "pm.collectionVariables.set('runUsername2', 'charles-' + runId);",
-                  "['token', 'token2', 'customerId', 'customerId2', 'savingsAccountId', 'checkingAccountId', 'savingsAccountId2'].forEach(key => pm.collectionVariables.unset(key));"
+                  "['token', 'token2', 'customerId', 'customerId2', 'savingsAccountId', 'checkingAccountId', 'savingsAccountId2', 'deletableAccountId'].forEach(key => pm.collectionVariables.unset(key));"
                 ]
               }
             },
@@ -1010,6 +1010,78 @@
               "    pm.expect(pm.response.json().id).to.equal(pm.collectionVariables.get('customerId'));",
               "    pm.expect(pm.response.json().name).to.equal('Ada Byron');",
               "    pm.expect(pm.response.json().username).to.equal(pm.collectionVariables.get('updatedUsername'));",
+              "});"
+            ] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Account deletion",
+      "item": [
+        {
+          "name": "Create empty account to delete",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{customerId}}\",\n  \"accountType\": \"CHECKING\"\n}" },
+            "url": "{{baseUrl}}/api/accounts"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Empty account created for deletion', function () {",
+              "    pm.response.to.have.status(201);",
+              "    pm.expect(Number(pm.response.json().balance)).to.equal(0);",
+              "});",
+              "if (pm.response.code === 201) pm.collectionVariables.set('deletableAccountId', pm.response.json().id);"
+            ] }
+          }]
+        },
+        {
+          "name": "Reject deletion with funds",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/accounts/{{savingsAccountId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Funded account cannot be deleted', function () {",
+              "    pm.response.to.have.status(409);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Reject deletion of another customer's account",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/accounts/{{savingsAccountId2}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Customer cannot delete another customer account', function () {",
+              "    pm.response.to.have.status(403);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Delete empty account",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/accounts/{{deletableAccountId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Zero-balance account deleted', function () {",
+              "    pm.response.to.have.status(204);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Verify empty account was deleted",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/accounts/{{deletableAccountId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Deleted account is not found', function () {",
+              "    pm.response.to.have.status(404);",
               "});"
             ] }
           }]

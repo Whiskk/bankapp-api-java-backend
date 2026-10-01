@@ -61,6 +61,18 @@ public class AccountService {
         return accountRepository.findByUserId(customer.id());
     }
 
+    public void deleteAccount(String id, Authentication authentication) {
+        Account account = findAccount(id);
+        requireCustomerAccess(account.userId(), authentication);
+        if (account.balance().compareTo(BigDecimal.ZERO) != 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Account balance must be zero before deletion");
+        }
+        if (!accountRepository.deleteByIdIfZeroBalance(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Account balance changed; refresh and try again");
+        }
+        transactionRepository.deleteByAccountIdIn(List.of(id));
+    }
+
     public Account deposit(String id, MoneyRequest request, Authentication authentication) {
         requireCustomerAccess(findAccount(id).userId(), authentication);
         return applyTransaction(id, request.amount(), TransactionType.DEPOSIT);

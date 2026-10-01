@@ -71,7 +71,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Ada Lovelace\",\n  \"username\": \"ada\",\n  \"password\": \"password123\"\n}",
+              "raw": "{\n  \"name\": \"Ada Lovelace\",\n  \"username\": \"{{runUsername}}\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -91,6 +91,18 @@
             }
           },
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runId = pm.variables.replaceIn('{{$guid}}');",
+                  "pm.collectionVariables.set('runUsername', 'ada-' + runId);",
+                  "pm.collectionVariables.set('runUsername2', 'charles-' + runId);",
+                  "['token', 'token2', 'customerId', 'customerId2', 'savingsAccountId', 'checkingAccountId', 'savingsAccountId2'].forEach(key => pm.collectionVariables.unset(key));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -122,7 +134,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"ada\",\n  \"password\": \"password123\"\n}",
+              "raw": "{\n  \"username\": \"{{runUsername}}\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -157,117 +169,54 @@
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "Customers",
-      "item": [
-        {
-          "name": "Get all customers",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/customers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "customers"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Request succeeded', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
         },
         {
-          "name": "Get customer by ID",
+          "name": "Reject duplicate username",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "customers",
-                "{{customerId}}"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Customer found', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Update customer",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Ada Byron\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"name\": \"Another Ada\",\n  \"username\": \"{{runUsername}}\",\n  \"password\": \"password123\"\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "customers",
-                "{{customerId}}"
+            "url": "{{baseUrl}}/api/auth/register"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Duplicate username is rejected', function () {",
+                "    pm.response.to.have.status(409);",
+                "});"
               ]
             }
+          }]
+        },
+        {
+          "name": "Reject incorrect password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{runUsername}}\",\n  \"password\": \"wrong-password\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Customer updated', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Incorrect password is rejected', function () {",
+                "    pm.expect([401, 403]).to.include(pm.response.code);",
+                "});"
+              ]
             }
-          ]
+          }]
         }
       ]
     },
@@ -369,6 +318,28 @@
           ]
         },
         {
+          "name": "Get my accounts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/accounts/me"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Customer sees only their own accounts', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const accounts = pm.response.json();",
+                "    pm.expect(accounts).to.have.length(2);",
+                "    pm.expect(accounts.every(account => account.userId === pm.collectionVariables.get('customerId'))).to.equal(true);",
+                "    pm.expect(accounts.map(account => account.accountType)).to.have.members(['SAVINGS', 'CHECKING']);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
           "name": "Get account details",
           "request": {
             "method": "GET",
@@ -444,6 +415,7 @@
                 "exec": [
                   "pm.test('Deposit succeeded', function () {",
                   "    pm.response.to.have.status(200);",
+                  "    pm.expect(Number(pm.response.json().balance)).to.equal(500);",
                   "});"
                 ]
               }
@@ -490,6 +462,7 @@
                 "exec": [
                   "pm.test('Withdrawal succeeded', function () {",
                   "    pm.response.to.have.status(200);",
+                  "    pm.expect(Number(pm.response.json().balance)).to.equal(300);",
                   "});"
                 ]
               }
@@ -535,11 +508,53 @@
                 "exec": [
                   "pm.test('Transfer succeeded', function () {",
                   "    pm.response.to.have.status(200);",
+                  "    pm.expect(Number(pm.response.json().balance)).to.equal(200);",
                   "});"
                 ]
               }
             }
           ]
+        },
+        {
+          "name": "Get checking balance after transfer",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/accounts/{{checkingAccountId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Destination account received the transfer', function () {",
+                "    pm.response.to.have.status(200);",
+                "    pm.expect(Number(pm.response.json().balance)).to.equal(100);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Get checking transaction history",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/accounts/{{checkingAccountId}}/transactions"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Destination account records the transfer', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const history = pm.response.json();",
+                "    pm.expect(history).to.have.length(1);",
+                "    pm.expect(history[0].type).to.equal('TRANSFER');",
+                "    pm.expect(Number(history[0].balanceAfter)).to.equal(100);",
+                "});"
+              ]
+            }
+          }]
         },
         {
           "name": "Get transaction history",
@@ -567,6 +582,9 @@
                 "exec": [
                   "pm.test('Transaction history loaded', function () {",
                   "    pm.response.to.have.status(200);",
+                  "    const history = pm.response.json();",
+                  "    pm.expect(history).to.have.length(3);",
+                  "    pm.expect(history.map(entry => entry.type)).to.have.members(['DEPOSIT', 'WITHDRAWAL', 'TRANSFER']);",
                   "});"
                 ]
               }
@@ -593,7 +611,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Charles Babbage\",\n  \"username\": \"charles\",\n  \"password\": \"password123\"\n}",
+              "raw": "{\n  \"name\": \"Charles Babbage\",\n  \"username\": \"{{runUsername2}}\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -644,7 +662,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"charles\",\n  \"password\": \"password123\"\n}",
+              "raw": "{\n  \"username\": \"{{runUsername2}}\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -787,47 +805,7 @@
                 "exec": [
                   "pm.test('Deposit 2 succeeded', function () {",
                   "    pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get customer 2 details (Verify retention)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token2}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/customers/{{customerId2}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "customers",
-                "{{customerId2}}"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Customer 2 still exists', function () {",
-                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(Number(pm.response.json().balance)).to.equal(1500);",
                   "});"
                 ]
               }
@@ -837,69 +815,204 @@
       ]
     },
     {
-      "name": "Cleanup",
+      "name": "Account ownership checks",
       "item": [
         {
-          "name": "Delete customer 1",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "customers",
-                "{{customerId}}"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Customer 1 deleted', function () {",
-                  "    pm.response.to.have.status(204);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Verify customer 1 deleted",
+          "name": "Customer cannot read another account",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "customers",
-                "{{customerId}}"
+            "url": "{{baseUrl}}/api/accounts/{{savingsAccountId2}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Account owner check denies cross-customer reads', function () {",
+                "    pm.response.to.have.status(403);",
+                "});"
               ]
             }
+          }]
+        },
+        {
+          "name": "Customer cannot deposit into another account",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 10\n}" },
+            "url": "{{baseUrl}}/api/accounts/{{savingsAccountId2}}/deposit"
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Customer 1 returns 404', function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});"
-                ]
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Account owner check denies cross-customer deposits', function () {",
+                "    pm.response.to.have.status(403);",
+                "});"
+              ]
             }
-          ]
+          }]
+        },
+        {
+          "name": "Customer 2 sees only own accounts",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token2}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/accounts/me"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Second customer sees only their own account', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const accounts = pm.response.json();",
+                "    pm.expect(accounts).to.have.length(1);",
+                "    pm.expect(accounts[0].id).to.equal(pm.collectionVariables.get('savingsAccountId2'));",
+                "    pm.expect(accounts[0].userId).to.equal(pm.collectionVariables.get('customerId2'));",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get my profile",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/customers/me" },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Profile belongs to the signed-in customer', function () {",
+                "    pm.response.to.have.status(200);",
+                "    pm.expect(pm.response.json().id).to.equal(pm.collectionVariables.get('customerId'));",
+                "    pm.expect(pm.response.json().username).to.equal(pm.collectionVariables.get('runUsername'));",
+                "});",
+                "pm.collectionVariables.set('updatedUsername', 'updated-' + pm.collectionVariables.get('runUsername'));"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Update my name",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ada Byron\",\n  \"username\": \"{{runUsername}}\"\n}" },
+            "url": "{{baseUrl}}/api/customers/me"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Name changes without changing credentials', function () {",
+                "    pm.response.to.have.status(200);",
+                "    pm.expect(pm.response.json().name).to.equal('Ada Byron');",
+                "    pm.expect(pm.response.json().username).to.equal(pm.collectionVariables.get('runUsername'));",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Reject profile change with wrong current password",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ada Byron\",\n  \"username\": \"{{updatedUsername}}\",\n  \"currentPassword\": \"wrong-password\"\n}" },
+            "url": "{{baseUrl}}/api/customers/me"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Wrong current password is rejected', function () {",
+              "    pm.response.to.have.status(403);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Reject duplicate profile username",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ada Byron\",\n  \"username\": \"{{runUsername2}}\",\n  \"currentPassword\": \"password123\"\n}" },
+            "url": "{{baseUrl}}/api/customers/me"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Existing username is rejected', function () {",
+              "    pm.response.to.have.status(409);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Update username and password",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ada Byron\",\n  \"username\": \"{{updatedUsername}}\",\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}" },
+            "url": "{{baseUrl}}/api/customers/me"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Username and password changed without changing the customer ID', function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json().id).to.equal(pm.collectionVariables.get('customerId'));",
+              "    pm.expect(pm.response.json().username).to.equal(pm.collectionVariables.get('updatedUsername'));",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Log in with updated credentials",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{updatedUsername}}\",\n  \"password\": \"newpassword123\"\n}" },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('New credentials can sign in', function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json().customerId).to.equal(pm.collectionVariables.get('customerId'));",
+              "});",
+              "if (pm.response.code === 200) pm.collectionVariables.set('token', pm.response.json().token);"
+            ] }
+          }]
+        },
+        {
+          "name": "Get updated profile",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/customers/me" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('New token resolves the same customer and updated profile', function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json().id).to.equal(pm.collectionVariables.get('customerId'));",
+              "    pm.expect(pm.response.json().name).to.equal('Ada Byron');",
+              "    pm.expect(pm.response.json().username).to.equal(pm.collectionVariables.get('updatedUsername'));",
+              "});"
+            ] }
+          }]
         }
       ]
     }

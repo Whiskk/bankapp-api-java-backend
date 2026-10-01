@@ -5,6 +5,7 @@ import java.util.List;
 import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +19,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import com.example.bankapp.models.Customer;
 import com.example.bankapp.models.CustomerRequest;
 import com.example.bankapp.models.CustomerResponse;
+import com.example.bankapp.models.ProfileUpdateRequest;
 import com.example.bankapp.services.CustomerService;
 
 @RestController
@@ -35,6 +37,18 @@ public class CustomerController {
         return customerService.getAllCustomers().stream()
                 .map(CustomerResponse::from)
                 .toList();
+    }
+
+    @GetMapping("/me")
+    public CustomerResponse getMyProfile(Authentication authentication) {
+        return CustomerResponse.from(customerService.getCustomerByUsername(authentication.getName()));
+    }
+
+    @PutMapping("/me")
+    public CustomerResponse updateMyProfile(
+            Authentication authentication,
+            @Valid @RequestBody ProfileUpdateRequest request) {
+        return CustomerResponse.from(customerService.updateOwnProfile(authentication.getName(), request));
     }
 
     @GetMapping("/{id}")

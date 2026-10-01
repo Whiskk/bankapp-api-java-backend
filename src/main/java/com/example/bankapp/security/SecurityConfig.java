@@ -1,5 +1,7 @@
 package com.example.bankapp.security;
 
+import jakarta.servlet.DispatcherType;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -41,7 +43,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/customers/me").hasRole("USER")
+                        .requestMatchers(HttpMethod.PUT, "/api/customers/me").hasRole("USER")
                         .requestMatchers("/api/customers/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/accounts").hasRole("ADMIN")
                         .anyRequest().authenticated())

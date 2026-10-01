@@ -51,7 +51,7 @@ public class AuthService {
         }
 
         return new LoginResponse(
-                jwtService.createToken(customer.username()),
+            jwtService.createToken(customer.id()),
                 customer.id(),
                 customer.username(),
                 customer.admin());

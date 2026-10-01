@@ -24,17 +24,17 @@ public class JwtService {
         this.expirationMillis = expirationMillis;
     }
 
-    public String createToken(String username) {
+    public String createToken(String customerId) {
         Date now = new Date();
         return Jwts.builder()
-                .subject(username)
+                .subject(customerId)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expirationMillis))
                 .signWith(signingKey)
                 .compact();
     }
 
-    public String extractUsername(String token) {
+    public String extractCustomerId(String token) {
         return Jwts.parser()
                 .verifyWith(signingKey)
                 .build()

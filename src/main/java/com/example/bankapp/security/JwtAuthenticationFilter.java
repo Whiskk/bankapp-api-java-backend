@@ -10,20 +10,22 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.example.bankapp.repos.CustomerRepository;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserDetailsService userDetailsService;
+    private final CustomerRepository customerRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtService jwtService, CustomerRepository customerRepository) {
         this.jwtService = jwtService;
-        this.userDetailsService = userDetailsService;
+        this.customerRepository = customerRepository;
     }
 
     @Override
@@ -35,8 +37,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authorization != null && authorization.startsWith("Bearer ")
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                String username = jwtService.extractUsername(authorization.substring(7));
-                var principal = userDetailsService.loadUserByUsername(username);
+                String customerId = jwtService.extractCustomerId(authorization.substring(7));
+                var customer = customerRepository.findById(customerId).orElseThrow();
+                var principal = User.withUsername(customer.username())
+                    .password(customer.passwordHash())
+                    .authorities(customer.admin() ? "ROLE_ADMIN" : "ROLE_USER")
+                    .build();
                 var authentication = new UsernamePasswordAuthenticationToken(
                         principal, null, principal.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

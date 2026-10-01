@@ -116,7 +116,7 @@ macOS or Linux:
 ./mvnw test
 ```
 
-The tests cover the customer lifecycle, multiple accounts per customer, deposits, withdrawals, transfers, balances, and transaction history.
+Maven includes focused customer-profile and JWT identity tests. Run the Postman collection below to exercise the full API workflow.
 
 ## API Overview
 
@@ -126,12 +126,16 @@ All endpoints return JSON unless otherwise noted.
 | --- | --- | --- |
 | `POST` | `/api/auth/register` | Register a customer with login credentials |
 | `POST` | `/api/auth/login` | Authenticate and receive a JWT |
+| `GET` | `/api/customers/me` | Get the signed-in customer's profile |
+| `PUT` | `/api/customers/me` | Edit the signed-in customer's name, username, or password |
 | `GET` | `/api/customers` | Get all customers |
 | `GET` | `/api/customers/{id}` | Get one customer |
 | `POST` | `/api/customers` | Create a customer (authenticated/internal flow) |
 | `PUT` | `/api/customers/{id}` | Edit a customer's name |
 | `DELETE` | `/api/customers/{id}` | Delete a customer |
 | `POST` | `/api/accounts` | Create an account |
+| `GET` | `/api/accounts/me` | Get the signed-in customer's accounts |
+| `GET` | `/api/accounts?userId={id}` | List a customer's accounts (admin only) |
 | `GET` | `/api/accounts/{id}` | Get account details |
 | `POST` | `/api/accounts/{id}/deposit` | Deposit money |
 | `POST` | `/api/accounts/{id}/withdraw` | Withdraw money |
@@ -143,6 +147,8 @@ Protected endpoints require:
 ```http
 Authorization: Bearer <token>
 ```
+
+Newly issued JWTs identify the customer by ID rather than username. After upgrading from older versions, sign in again to receive a new token.
 
 ## Authentication Examples
 
@@ -236,7 +242,28 @@ GET http://localhost:8080/api/accounts/me
 GET http://localhost:8080/api/customers/671a9b8a8f4b2c1d9a123400
 ```
 
-### Edit a customer
+### Edit your profile
+
+Customers can read their own profile with `GET /api/customers/me`. To change their name, username, or password:
+
+```http
+PUT http://localhost:8080/api/customers/me
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+```json
+{
+  "name": "Ada Byron",
+  "username": "ada-byron",
+  "currentPassword": "password123",
+  "newPassword": "newpassword123"
+}
+```
+
+Only `name` and `username` are required. A name-only change does not need `currentPassword`; changing the username or supplying `newPassword` requires it. New passwords must be at least 8 characters and are stored as BCrypt hashes. Usernames already in use return `409 Conflict`. The frontend signs out after a password change so the customer can sign in with the new password. Previously issued JWTs are not revoked server-side and remain valid until they expire.
+
+### Edit a customer as admin
 
 ```http
 PUT http://localhost:8080/api/customers/671a9b8a8f4b2c1d9a123400
@@ -488,17 +515,11 @@ The repository interfaces provide the boundary where database-backed implementat
 
 The repository includes a ready-to-import collection at [postman/william-rowley-simple-bank-app.postman_collection.json](postman/william-rowley-simple-bank-app.postman_collection.json).
 
-In Postman, select **Import**, choose that JSON file, and open the **Simple Bank App API** collection. Its requests use the `baseUrl`, `token`, `customerId`, `savingsAccountId`, and `checkingAccountId` collection variables.
+In Postman, select **Import**, choose that JSON file, and open the **Simple Bank App API** collection. The collection only needs the running API; no admin credentials are required for these requests.
 
-1. Start the API with `./mvnw spring-boot:run` or `.\mvnw.cmd spring-boot:run`.
-2. Run **Authentication -> Register customer**.
-3. Run **Authentication -> Login**. The test script stores the JWT automatically.
-4. Create two accounts using the saved customer ID.
-5. Deposit money into the first account.
-6. Transfer money to the second account.
-7. Check both account balances.
-8. Check transaction history for both accounts.
-9. Run **Cleanup -> Delete customer** last.
+Run the **entire collection in order** with the Collection Runner. The first registration generates new usernames for that run, and subsequent requests reuse them; no database reset is needed. The scripts save the customer tokens and account IDs for dependent requests. Do not run individual requests out of order without first running their prerequisites. Both registered customers and their accounts remain in the database after each run. Each run uses fresh usernames, so the collection can run again against the same database.
+
+The collection checks duplicate-username rejection, regular login, account creation/reads, balances and transaction history, self-only account listings, unauthorized cross-customer account access, and customer profile edits with password verification. Account operations use the owning customer's token. Admin-only customer management and account-list-by-customer requests are not included in this run.
 
 For `POST` and `PUT` requests, use:
 

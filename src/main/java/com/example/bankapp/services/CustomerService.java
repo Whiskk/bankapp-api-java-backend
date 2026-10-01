@@ -3,12 +3,14 @@ package com.example.bankapp.services;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.bankapp.models.Customer;
 import com.example.bankapp.models.CustomerRequest;
+import com.example.bankapp.models.ProfileUpdateRequest;
 import com.example.bankapp.repos.CustomerRepository;
 
 import com.example.bankapp.models.Account;
@@ -21,14 +23,17 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
     private final AccountTransactionRepository accountTransactionRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public CustomerService(
             CustomerRepository customerRepository,
             AccountRepository accountRepository,
-            AccountTransactionRepository accountTransactionRepository) {
+            AccountTransactionRepository accountTransactionRepository,
+            PasswordEncoder passwordEncoder) {
         this.customerRepository = customerRepository;
         this.accountRepository = accountRepository;
         this.accountTransactionRepository = accountTransactionRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public List<Customer> getAllCustomers() {
@@ -39,6 +44,34 @@ public class CustomerService {
 
     public Customer getCustomerById(String id) {
         return findCustomer(id);
+    }
+
+    public Customer getCustomerByUsername(String username) {
+        return customerRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+    }
+
+    public Customer updateOwnProfile(String username, ProfileUpdateRequest request) {
+        Customer customer = getCustomerByUsername(username);
+        String requestedUsername = request.username().trim();
+        boolean changingUsername = !customer.username().equals(requestedUsername);
+        boolean changingPassword = request.newPassword() != null;
+
+        if ((changingUsername || changingPassword)
+                && (request.currentPassword() == null
+                    || !passwordEncoder.matches(request.currentPassword(), customer.passwordHash()))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Current password is incorrect");
+        }
+        if (changingUsername && customerRepository.findByUsername(requestedUsername).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already in use");
+        }
+
+        return customerRepository.save(new Customer(
+                customer.id(),
+                request.name().trim(),
+                requestedUsername,
+                changingPassword ? passwordEncoder.encode(request.newPassword()) : customer.passwordHash(),
+                customer.admin()));
     }
 
     public Customer createCustomer(CustomerRequest request) {
